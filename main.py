@@ -3,8 +3,10 @@ from cvzone.HandTrackingModule import HandDetector
 
 # Inisialisasi kamera
 cap = cv2.VideoCapture(0)
-cap.set(3, 640)
-cap.set(4, 480)
+# Set window size to be smaller and resizable
+cap.set(3, 640)  # Width
+cap.set(4, 480)  # Height
+cv2.namedWindow('Image', cv2.WINDOW_NORMAL)  # Make window resizable
 if not cap.isOpened():
     print("Error: Tidak dapat mengakses kamera")
     exit()
@@ -31,12 +33,11 @@ while True:
         fingers1 = detector.fingersUp(hand1)
         print(fingers1)
 
-        # # Tambahkan pengecekan indeks
-        # if len(lmList1) > 12:  # Pastikan indeks 8 dan 12 tersedia
-        #     length, info, img = detector.findDistance(
-        #         lmList1[8][0:2], lmList1[12][0:2], img, color=(255, 0, 255), scale=10
-        #     )
-        #     print(length)
+        # Tambahkan pengecekan indeks
+        if len(lmList1) > 12:  # Pastikan indeks 8 dan 12 tersedia
+            length, info, img = detector.findDistance(
+                lmList1[8][0:2], lmList1[12][0:2], img, color=(255, 0, 255), scale=10
+            )
 
     if img is not None:
         cv2.imshow("Image", img)

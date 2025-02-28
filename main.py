@@ -1,53 +1,110 @@
 import cv2
 from cvzone.HandTrackingModule import HandDetector
 
-# Inisialisasi kamera
-cap = cv2.VideoCapture(0)
-# Set window size to be smaller and resizable
-cap.set(3, 640)  # Width
-cap.set(4, 480)  # Height
-cv2.namedWindow('Image', cv2.WINDOW_NORMAL)  # Make window resizable
-if not cap.isOpened():
-    print("Error: Tidak dapat mengakses kamera")
-    exit()
 
-detector = HandDetector(
-    staticMode=False, maxHands=1, modelComplexity=1, detectionCon=0.5, minTrackCon=0.5
-)
+def init_camera(width=640, height=480):
+    """Inisialisasi dan setup kamera"""
+    cap = cv2.VideoCapture(0)
+    cap.set(3, width)  # Width
+    cap.set(4, height)  # Height
+    cv2.namedWindow("Image", cv2.WINDOW_NORMAL)  # Make window resizable
 
-while True:
-    success, img = cap.read()
-    if not success:
-        print("Gagal membaca frame dari kamera")
-        break
+    if not cap.isOpened():
+        print("Error: Tidak dapat mengakses kamera")
+        return None
+    return cap
 
+
+def setup_detector():
+    """Inisialisasi hand detector"""
+    return HandDetector(
+        staticMode=False,
+        maxHands=1,
+        modelComplexity=1,
+        detectionCon=0.7,
+        minTrackCon=0.5,
+    )
+
+
+def get_hand_info(img, detector, debug=False):
+    """Mendapatkan informasi tangan dari gambar"""
     hands, img = detector.findHands(img, draw=True, flipType=True)
 
     if hands:
-        hand1 = hands[0]
-        lmList1 = hand1["lmList"]
-        bbox1 = hand1["bbox"]
-        center1 = hand1["center"]
-        handType1 = hand1["type"]
-
-        fingers1 = detector.fingersUp(hand1)
-        print(fingers1)
-
-        # Tambahkan pengecekan indeks
-        if len(lmList1) > 12:  # Pastikan indeks 8 dan 12 tersedia
-            length, info, img = detector.findDistance(
-                lmList1[8][0:2], lmList1[12][0:2], img, color=(255, 0, 255), scale=10
-            )
-
-    if img is not None:
-        cv2.imshow("Image", img)
+        hand = hands[0]
+        lm_list = hand["lmList"]
+        fingers = detector.fingersUp(hand)
+        if debug:
+            print(f"Fingers: {fingers}")
+        return fingers, lm_list, img
     else:
-        print("Error: Image could not be displayed - img is None")
+        return None, None, img
 
-    # Tambahkan cara untuk keluar dari loop
-    if cv2.waitKey(1) & 0xFF == ord("q"):
-        break
 
-# Bersihkan saat program selesai
-cap.release()
-cv2.destroyAllWindows()
+def calculate_finger_distance(lm_list, img, detector, debug=False):
+    """Menghitung jarak antar jari"""
+    if lm_list is not None and len(lm_list) > 12:
+        length, info, img = detector.findDistance(
+            lm_list[8][0:2], lm_list[12][0:2], img, color=(255, 0, 255), scale=10
+        )
+        if debug:
+            print(f"Distance between fingers: {length}")
+        return length, img
+    return None, img
+
+
+def draw(info, img, prev_pos):
+    fingers, lm_list = info
+    current_pos = None
+
+    # deteksi jika hanya jari telunjuk
+    if fingers == [0, 1, 0, 0, 0]:
+        current_pos = lm_list[8][0:2]
+        if prev_pos is None:
+            prev_pos = current_pos
+        cv2.line(img, prev_pos, current_pos, (0, 255, 0), 2)
+        prev_pos = current_pos
+
+    return prev_pos
+
+
+
+def main():
+    """Fungsi utama program"""
+    cap = init_camera()
+    if cap is None:
+        return
+
+    detector = setup_detector()
+    debug = True  # Set False untuk menghilangkan pesan debug
+    prev_pos = None
+
+    try:
+        while True:
+            success, img = cap.read()
+            if not success:
+                print("Gagal membaca frame")
+                break
+
+            # Proses deteksi tangan
+            fingers, lm_list, img = get_hand_info(img, detector, debug)
+
+            # Hitung jarak jari jika tangan terdeteksi
+            if lm_list is not None:
+                _, img = calculate_finger_distance(lm_list, img, detector, debug)
+
+            # Tampilkan hasil jika img tidak None
+            if img is not None:
+                cv2.imshow("Image", img)
+
+            # Keluar dari loop jika 'q' ditekan
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
+    finally:
+        # Pastikan resources dibersihkan
+        cap.release()
+        cv2.destroyAllWindows()
+
+
+if __name__ == "__main__":
+    main()

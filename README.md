@@ -27,6 +27,7 @@ This project uses computer vision to detect hand gestures and enable drawing on 
 ## Future Integration
 
 This project is designed to be integrated with AI models that can:
+
 - Recognize handwritten mathematical equations
 - Solve these equations in real-time
 - Display the solutions on screen
